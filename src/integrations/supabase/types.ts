@@ -1413,6 +1413,7 @@ export type Database = {
         Row: {
           assigned_technician_id: string | null
           case_number: string | null
+          client_type: string
           clinic_code: string | null
           clinic_doctor_name: string | null
           clinic_fee: number | null
@@ -1421,6 +1422,11 @@ export type Database = {
           dentist_id: string | null
           discount: number
           due_date: string | null
+          external_client_email: string | null
+          external_client_name: string | null
+          external_client_phone: string | null
+          external_contact_person: string | null
+          external_patient_name: string | null
           id: string
           instructions: string | null
           is_paid: boolean
@@ -1445,6 +1451,7 @@ export type Database = {
         Insert: {
           assigned_technician_id?: string | null
           case_number?: string | null
+          client_type?: string
           clinic_code?: string | null
           clinic_doctor_name?: string | null
           clinic_fee?: number | null
@@ -1453,6 +1460,11 @@ export type Database = {
           dentist_id?: string | null
           discount?: number
           due_date?: string | null
+          external_client_email?: string | null
+          external_client_name?: string | null
+          external_client_phone?: string | null
+          external_contact_person?: string | null
+          external_patient_name?: string | null
           id?: string
           instructions?: string | null
           is_paid?: boolean
@@ -1477,6 +1489,7 @@ export type Database = {
         Update: {
           assigned_technician_id?: string | null
           case_number?: string | null
+          client_type?: string
           clinic_code?: string | null
           clinic_doctor_name?: string | null
           clinic_fee?: number | null
@@ -1485,6 +1498,11 @@ export type Database = {
           dentist_id?: string | null
           discount?: number
           due_date?: string | null
+          external_client_email?: string | null
+          external_client_name?: string | null
+          external_client_phone?: string | null
+          external_contact_person?: string | null
+          external_patient_name?: string | null
           id?: string
           instructions?: string | null
           is_paid?: boolean
