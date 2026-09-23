@@ -43,21 +43,42 @@ const JOB_INSTRUCTION_OPTIONS = [
 
 const REMARK_OPTIONS = ["Express", "Rejected", "Damaged", "Repeat", "Remake"] as const;
 
-const labCaseSchema = z.object({
-  patientId: z.string().min(1, "Select a patient"),
-  dentistId: z.string().min(1, "Select a dentist"),
-  jobInstructions: z.array(z.string()).min(1, "Select at least one"),
-  cost: z.coerce.number().min(0, "Must be >= 0"),
-  dueDate: z.date({ required_error: "Select delivery date" }),
-  // Optional extras (hidden until "More details" is opened)
-  clinicCode: z.string().optional(),
-  jobDescription: z.string().optional(),
-  shade: z.string().optional(),
-  discount: z.coerce.number().min(0).default(0),
-  isPaid: z.boolean().default(false),
-  remark: z.string().optional(),
-  instructions: z.string().optional(),
-});
+const labCaseSchema = z
+  .object({
+    clientType: z.enum(["internal", "external"]).default("internal"),
+    // In-house work
+    patientId: z.string().optional(),
+    dentistId: z.string().optional(),
+    // Outside work sent in by another clinic / dentist
+    externalClientName: z.string().optional(),
+    externalContactPerson: z.string().optional(),
+    externalClientPhone: z.string().optional(),
+    externalClientEmail: z.string().optional(),
+    externalPatientName: z.string().optional(),
+    jobInstructions: z.array(z.string()).min(1, "Select at least one"),
+    cost: z.coerce.number().min(0, "Must be >= 0"),
+    dueDate: z.date({ required_error: "Select delivery date" }),
+    urgency: z.enum(["normal", "urgent"]).default("normal"),
+    // Optional extras (hidden until "More details" is opened)
+    clinicCode: z.string().optional(),
+    jobDescription: z.string().optional(),
+    shade: z.string().optional(),
+    discount: z.coerce.number().min(0).default(0),
+    isPaid: z.boolean().default(false),
+    remark: z.string().optional(),
+    instructions: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.clientType === "internal") {
+      if (!data.patientId) ctx.addIssue({ code: "custom", path: ["patientId"], message: "Select a patient" });
+      if (!data.dentistId) ctx.addIssue({ code: "custom", path: ["dentistId"], message: "Select a clinician" });
+    } else {
+      if (!data.externalClientName)
+        ctx.addIssue({ code: "custom", path: ["externalClientName"], message: "Enter the clinic or dentist name" });
+      if (!data.externalPatientName)
+        ctx.addIssue({ code: "custom", path: ["externalPatientName"], message: "Enter the patient name / case reference" });
+    }
+  });
 
 type LabCaseFormValues = z.infer<typeof labCaseSchema>;
 
@@ -68,11 +89,18 @@ interface CreateLabCaseDialogProps {
 }
 
 const emptyValues = (patientId?: string): LabCaseFormValues => ({
+  clientType: "internal",
   patientId: patientId || "",
   dentistId: "",
+  externalClientName: "",
+  externalContactPerson: "",
+  externalClientPhone: "",
+  externalClientEmail: "",
+  externalPatientName: "",
   jobInstructions: [],
   cost: 0,
   dueDate: undefined as unknown as Date,
+  urgency: "normal",
   clinicCode: "",
   jobDescription: "",
   shade: "",
