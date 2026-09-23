@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
-import { useLabCases } from "@/hooks/useLabCases";
+import { useLabCases, type LabCaseRow } from "@/hooks/useLabCases";
 import { CreateLabCaseDialog } from "@/components/dashboard/CreateLabCaseDialog";
+import { LabCaseDetailDialog } from "@/components/dashboard/LabCaseDetailDialog";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -29,6 +30,7 @@ const stagger = {
 
 export default function LabCasesPage() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<LabCaseRow | null>(null);
   const { data: cases = [], isLoading } = useLabCases();
   const statuses = ["pending", "in-progress", "ready", "delivered"] as const;
 
@@ -67,19 +69,29 @@ export default function LabCasesPage() {
                     {filtered.map((c) => (
                       <div
                         key={c.id}
-                        className={`p-3 rounded-lg border border-border/30 bg-card/50 hover:shadow-md transition-all duration-200 ${c.is_urgent ? "border-destructive/50" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedCase(c)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCase(c); }}
+                        className={`cursor-pointer p-3 rounded-lg border border-border/30 bg-card/50 hover:shadow-md transition-all duration-200 ${(c.is_urgent || c.urgency === "urgent") ? "border-destructive/50" : ""}`}
                       >
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium">{c.work_type}</p>
-                          {c.is_urgent && <Badge variant="destructive" className="text-[10px] px-1.5">Urgent</Badge>}
+                          {(c.is_urgent || c.urgency === "urgent") && <Badge variant="destructive" className="text-[10px] px-1.5">Urgent</Badge>}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {c.patients ? `${c.patients.first_name} ${c.patients.last_name}` : "Unknown"}
+                          {c.client_type === "external"
+                            ? c.external_patient_name || c.external_client_name || "Outside client"
+                            : c.patients ? `${c.patients.first_name} ${c.patients.last_name}` : "Unknown"}
                         </p>
                         <p className="text-[10px] text-muted-foreground">{c.case_number}</p>
-                        {c.clinic_doctor_name && (
+                        {c.client_type === "external" ? (
+                          <p className="text-[10px] text-muted-foreground">
+                            Outside: {c.external_client_name}
+                          </p>
+                        ) : c.clinic_doctor_name ? (
                           <p className="text-[10px] text-muted-foreground">Clinic: {c.clinic_doctor_name}</p>
-                        )}
+                        ) : null}
                         {c.remark && (
                           <Badge variant="outline" className="text-[10px] mt-1">{c.remark}</Badge>
                         )}
@@ -112,6 +124,11 @@ export default function LabCasesPage() {
       )}
 
       <CreateLabCaseDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <LabCaseDetailDialog
+        labCase={selectedCase}
+        open={!!selectedCase}
+        onOpenChange={(o) => { if (!o) setSelectedCase(null); }}
+      />
     </div>
   );
 }

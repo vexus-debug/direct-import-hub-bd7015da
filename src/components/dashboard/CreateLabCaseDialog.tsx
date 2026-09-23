@@ -43,21 +43,42 @@ const JOB_INSTRUCTION_OPTIONS = [
 
 const REMARK_OPTIONS = ["Express", "Rejected", "Damaged", "Repeat", "Remake"] as const;
 
-const labCaseSchema = z.object({
-  patientId: z.string().min(1, "Select a patient"),
-  dentistId: z.string().min(1, "Select a dentist"),
-  jobInstructions: z.array(z.string()).min(1, "Select at least one"),
-  cost: z.coerce.number().min(0, "Must be >= 0"),
-  dueDate: z.date({ required_error: "Select delivery date" }),
-  // Optional extras (hidden until "More details" is opened)
-  clinicCode: z.string().optional(),
-  jobDescription: z.string().optional(),
-  shade: z.string().optional(),
-  discount: z.coerce.number().min(0).default(0),
-  isPaid: z.boolean().default(false),
-  remark: z.string().optional(),
-  instructions: z.string().optional(),
-});
+const labCaseSchema = z
+  .object({
+    clientType: z.enum(["internal", "external"]).default("internal"),
+    // In-house work
+    patientId: z.string().optional(),
+    dentistId: z.string().optional(),
+    // Outside work sent in by another clinic / dentist
+    externalClientName: z.string().optional(),
+    externalContactPerson: z.string().optional(),
+    externalClientPhone: z.string().optional(),
+    externalClientEmail: z.string().optional(),
+    externalPatientName: z.string().optional(),
+    jobInstructions: z.array(z.string()).min(1, "Select at least one"),
+    cost: z.coerce.number().min(0, "Must be >= 0"),
+    dueDate: z.date({ required_error: "Select delivery date" }),
+    urgency: z.enum(["normal", "urgent"]).default("normal"),
+    // Optional extras (hidden until "More details" is opened)
+    clinicCode: z.string().optional(),
+    jobDescription: z.string().optional(),
+    shade: z.string().optional(),
+    discount: z.coerce.number().min(0).default(0),
+    isPaid: z.boolean().default(false),
+    remark: z.string().optional(),
+    instructions: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.clientType === "internal") {
+      if (!data.patientId) ctx.addIssue({ code: "custom", path: ["patientId"], message: "Select a patient" });
+      if (!data.dentistId) ctx.addIssue({ code: "custom", path: ["dentistId"], message: "Select a clinician" });
+    } else {
+      if (!data.externalClientName)
+        ctx.addIssue({ code: "custom", path: ["externalClientName"], message: "Enter the clinic or dentist name" });
+      if (!data.externalPatientName)
+        ctx.addIssue({ code: "custom", path: ["externalPatientName"], message: "Enter the patient name / case reference" });
+    }
+  });
 
 type LabCaseFormValues = z.infer<typeof labCaseSchema>;
 
@@ -68,11 +89,18 @@ interface CreateLabCaseDialogProps {
 }
 
 const emptyValues = (patientId?: string): LabCaseFormValues => ({
+  clientType: "internal",
   patientId: patientId || "",
   dentistId: "",
+  externalClientName: "",
+  externalContactPerson: "",
+  externalClientPhone: "",
+  externalClientEmail: "",
+  externalPatientName: "",
   jobInstructions: [],
   cost: 0,
   dueDate: undefined as unknown as Date,
+  urgency: "normal",
   clinicCode: "",
   jobDescription: "",
   shade: "",
@@ -94,6 +122,8 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
     defaultValues: emptyValues(preselectedPatientId),
   });
 
+  const clientType = form.watch("clientType");
+
   // Carry the patient chosen elsewhere (e.g. their own page) into this form
   useEffect(() => {
     if (!open) return;
@@ -104,12 +134,21 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
 
   function onSubmit(data: LabCaseFormValues) {
     const workType = data.jobInstructions.join(", ");
+    const isExternal = data.clientType === "external";
     // The doctor's name comes from the chosen clinician — no need to type it again
-    const doctorName = dentists.find((d) => d.id === data.dentistId)?.full_name || "";
+    const doctorName = isExternal
+      ? data.externalContactPerson || data.externalClientName || ""
+      : dentists.find((d) => d.id === data.dentistId)?.full_name || "";
     createLabCase.mutate(
       {
-        patient_id: data.patientId,
-        dentist_id: data.dentistId,
+        client_type: data.clientType,
+        patient_id: isExternal ? null : data.patientId,
+        dentist_id: isExternal ? null : data.dentistId,
+        external_client_name: isExternal ? data.externalClientName || "" : null,
+        external_contact_person: isExternal ? data.externalContactPerson || "" : null,
+        external_client_phone: isExternal ? data.externalClientPhone || "" : null,
+        external_client_email: isExternal ? data.externalClientEmail || "" : null,
+        external_patient_name: isExternal ? data.externalPatientName || "" : null,
         work_type: workType,
         clinic_code: data.clinicCode || "",
         clinic_doctor_name: doctorName,
@@ -119,6 +158,8 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
         lab_fee: data.cost,
         discount: data.discount,
         due_date: format(data.dueDate, "yyyy-MM-dd"),
+        urgency: data.urgency,
+        is_urgent: data.urgency === "urgent",
         is_paid: data.isPaid,
         remark: data.remark === "none" ? "" : (data.remark || ""),
         instructions: data.instructions || "",
@@ -142,41 +183,106 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Patient & Clinician */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField control={form.control} name="patientId" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Patient *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {patients.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="dentistId" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{terms.clinician} *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder={`Select ${terms.clinician.toLowerCase()}`} /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {dentists.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
+            {/* Where the work comes from */}
+            <FormField control={form.control} name="clientType" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Who is this work for?</FormLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={field.value === "internal" ? "default" : "outline"}
+                    onClick={() => field.onChange("internal")}
+                  >
+                    Our own patient
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={field.value === "external" ? "default" : "outline"}
+                    onClick={() => field.onChange("external")}
+                  >
+                    Outside client
+                  </Button>
+                </div>
+              </FormItem>
+            )} />
+
+            {clientType === "internal" ? (
+              /* Patient & Clinician */
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField control={form.control} name="patientId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Patient *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {patients.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="dentistId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{terms.clinician} *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder={`Select ${terms.clinician.toLowerCase()}`} /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {dentists.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            ) : (
+              /* Outside clinic / dentist sending work to our lab */
+              <div className="space-y-3 rounded-lg border p-3 bg-muted/10">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField control={form.control} name="externalClientName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Clinic / Dentist *</FormLabel>
+                      <FormControl><Input placeholder="e.g. Bright Smile Dental" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="externalPatientName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Patient name / reference *</FormLabel>
+                      <FormControl><Input placeholder="e.g. Mr A. Bello" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <FormField control={form.control} name="externalContactPerson" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact person</FormLabel>
+                      <FormControl><Input placeholder="Dr. Name" {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="externalClientPhone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl><Input placeholder="080..." {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="externalClientEmail" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl><Input placeholder="name@clinic.com" {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+              </div>
+            )}
 
             {/* Job Instructions */}
             <FormField control={form.control} name="jobInstructions" render={() => (
@@ -243,6 +349,23 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
                 </FormItem>
               )} />
             </div>
+
+            {/* Urgency */}
+            <FormField control={form.control} name="urgency" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Urgency</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select urgency" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+
 
             <Button type="button" variant="ghost" size="sm" className="px-0" onClick={() => setShowMore((s) => !s)}>
               <ChevronDown className={cn("mr-1.5 h-4 w-4 transition-transform", showMore && "rotate-180")} />
