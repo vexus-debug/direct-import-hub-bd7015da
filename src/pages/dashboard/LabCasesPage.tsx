@@ -29,6 +29,7 @@ const stagger = {
 
 export default function LabCasesPage() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<LabCaseRow | null>(null);
   const { data: cases = [], isLoading } = useLabCases();
   const statuses = ["pending", "in-progress", "ready", "delivered"] as const;
 
