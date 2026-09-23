@@ -124,6 +124,11 @@ export default function LabCasesPage() {
       )}
 
       <CreateLabCaseDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <LabCaseDetailDialog
+        labCase={selectedCase}
+        open={!!selectedCase}
+        onOpenChange={(o) => { if (!o) setSelectedCase(null); }}
+      />
     </div>
   );
 }
