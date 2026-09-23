@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
-import { useLabCases } from "@/hooks/useLabCases";
+import { useLabCases, type LabCaseRow } from "@/hooks/useLabCases";
 import { CreateLabCaseDialog } from "@/components/dashboard/CreateLabCaseDialog";
+import { LabCaseDetailDialog } from "@/components/dashboard/LabCaseDetailDialog";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
