@@ -181,41 +181,106 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Patient & Clinician */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField control={form.control} name="patientId" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Patient *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {patients.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="dentistId" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{terms.clinician} *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder={`Select ${terms.clinician.toLowerCase()}`} /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {dentists.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
+            {/* Where the work comes from */}
+            <FormField control={form.control} name="clientType" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Who is this work for?</FormLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={field.value === "internal" ? "default" : "outline"}
+                    onClick={() => field.onChange("internal")}
+                  >
+                    Our own patient
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={field.value === "external" ? "default" : "outline"}
+                    onClick={() => field.onChange("external")}
+                  >
+                    Outside client
+                  </Button>
+                </div>
+              </FormItem>
+            )} />
+
+            {clientType === "internal" ? (
+              /* Patient & Clinician */
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField control={form.control} name="patientId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Patient *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {patients.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="dentistId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{terms.clinician} *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder={`Select ${terms.clinician.toLowerCase()}`} /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {dentists.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            ) : (
+              /* Outside clinic / dentist sending work to our lab */
+              <div className="space-y-3 rounded-lg border p-3 bg-muted/10">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField control={form.control} name="externalClientName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Clinic / Dentist *</FormLabel>
+                      <FormControl><Input placeholder="e.g. Bright Smile Dental" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="externalPatientName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Patient name / reference *</FormLabel>
+                      <FormControl><Input placeholder="e.g. Mr A. Bello" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <FormField control={form.control} name="externalContactPerson" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact person</FormLabel>
+                      <FormControl><Input placeholder="Dr. Name" {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="externalClientPhone" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl><Input placeholder="080..." {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="externalClientEmail" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl><Input placeholder="name@clinic.com" {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+              </div>
+            )}
 
             {/* Job Instructions */}
             <FormField control={form.control} name="jobInstructions" render={() => (
