@@ -350,6 +350,23 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
               )} />
             </div>
 
+            {/* Urgency */}
+            <FormField control={form.control} name="urgency" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Urgency</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select urgency" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+
+
             <Button type="button" variant="ghost" size="sm" className="px-0" onClick={() => setShowMore((s) => !s)}>
               <ChevronDown className={cn("mr-1.5 h-4 w-4 transition-transform", showMore && "rotate-180")} />
               {showMore ? "Hide extra details" : "More details (optional)"}
