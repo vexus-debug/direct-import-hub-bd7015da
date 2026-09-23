@@ -122,6 +122,8 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
     defaultValues: emptyValues(preselectedPatientId),
   });
 
+  const clientType = form.watch("clientType");
+
   // Carry the patient chosen elsewhere (e.g. their own page) into this form
   useEffect(() => {
     if (!open) return;
