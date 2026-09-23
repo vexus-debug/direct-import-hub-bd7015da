@@ -6,8 +6,14 @@ import { useOrg } from "@/hooks/useOrg";
 export interface LabCaseRow {
   id: string;
   case_number: string;
-  patient_id: string;
-  dentist_id: string;
+  patient_id: string | null;
+  dentist_id: string | null;
+  client_type: string | null;
+  external_client_name: string | null;
+  external_contact_person: string | null;
+  external_client_phone: string | null;
+  external_client_email: string | null;
+  external_patient_name: string | null;
   technician_id: string | null;
   assigned_technician_id: string | null;
   treatment_id: string | null;
