@@ -132,12 +132,21 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
 
   function onSubmit(data: LabCaseFormValues) {
     const workType = data.jobInstructions.join(", ");
+    const isExternal = data.clientType === "external";
     // The doctor's name comes from the chosen clinician — no need to type it again
-    const doctorName = dentists.find((d) => d.id === data.dentistId)?.full_name || "";
+    const doctorName = isExternal
+      ? data.externalContactPerson || data.externalClientName || ""
+      : dentists.find((d) => d.id === data.dentistId)?.full_name || "";
     createLabCase.mutate(
       {
-        patient_id: data.patientId,
-        dentist_id: data.dentistId,
+        client_type: data.clientType,
+        patient_id: isExternal ? null : data.patientId,
+        dentist_id: isExternal ? null : data.dentistId,
+        external_client_name: isExternal ? data.externalClientName || "" : null,
+        external_contact_person: isExternal ? data.externalContactPerson || "" : null,
+        external_client_phone: isExternal ? data.externalClientPhone || "" : null,
+        external_client_email: isExternal ? data.externalClientEmail || "" : null,
+        external_patient_name: isExternal ? data.externalPatientName || "" : null,
         work_type: workType,
         clinic_code: data.clinicCode || "",
         clinic_doctor_name: doctorName,
@@ -147,6 +156,8 @@ export function CreateLabCaseDialog({ open, onOpenChange, preselectedPatientId }
         lab_fee: data.cost,
         discount: data.discount,
         due_date: format(data.dueDate, "yyyy-MM-dd"),
+        urgency: data.urgency,
+        is_urgent: data.urgency === "urgent",
         is_paid: data.isPaid,
         remark: data.remark === "none" ? "" : (data.remark || ""),
         instructions: data.instructions || "",
